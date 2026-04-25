@@ -52,9 +52,17 @@ func main() {
 			}
 
 			params := result.Req.Params
-			fmt.Printf("Method: %s, Path: %s, Version: %s\n", params.Method, params.Path, params.Version)
+			fmt.Println("PARAMS")
+			fmt.Printf("Method: %s, Path: %s, Version: %s\n\n", params.Method, params.Path, params.Version)
+
+			fmt.Println("HEADERS")
 			for _, header := range result.Req.Headers {
-				fmt.Printf("%s: %s\n", header.Key, header.Value)
+				fmt.Printf("%s: %s\n", header.GetKey(), header.GetValue())
+			}
+
+			fmt.Printf("\nBODY\n")
+			for _, body := range result.Req.Body {
+				fmt.Printf("%s: %s\n", body.GetKey(), body.GetValue())
 			}
 		}(conn)
 	}

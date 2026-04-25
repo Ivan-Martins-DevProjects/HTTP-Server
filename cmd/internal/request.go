@@ -2,27 +2,27 @@ package internal
 
 import (
 	"bufio"
+	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 )
 
 type Request struct {
 	Params  *Params
-	Headers []*Header
+	Headers []Content
+	Body    []Content
+	Content bool
 	mu      sync.Mutex
 }
 
 func (r *Request) AppendHeaderToRequest(header *Header) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	r.Headers = append(r.Headers, header)
 }
 
-type Header struct {
-	Key   string
-	Value string
+func (r *Request) AppendBodyToRequest(body *Body) {
+	r.Body = append(r.Body, body)
 }
 
 type Params struct {
@@ -31,15 +31,8 @@ type Params struct {
 	Version string
 }
 
-func CreateHeader(key, value string) *Header {
-	return &Header{
-		Key:   key,
-		Value: value,
-	}
-}
-
 func GetHeadersRequest(f io.ReadCloser) (*Request, error) {
-	req := &Request{}
+	req := &Request{Content: false}
 	scanner := bufio.NewScanner(f)
 
 	if scanner.Scan() {
@@ -65,9 +58,48 @@ func GetHeadersRequest(f io.ReadCloser) (*Request, error) {
 		if len(KeyAndValue) == 2 {
 			key := strings.TrimSpace(KeyAndValue[0])
 			value := strings.TrimSpace(KeyAndValue[1])
-
-			header := CreateHeader(key, value)
+			header := &Header{
+				key:   key,
+				value: value,
+			}
 			req.AppendHeaderToRequest(header)
+		}
+	}
+
+	for _, header := range req.Headers {
+		if strings.EqualFold(header.GetKey(), "Content-Type") && strings.EqualFold(header.GetValue(), "application/json") {
+			req.Content = true
+		}
+	}
+
+	var contentLength int64
+	if req.Content {
+		for _, header := range req.Headers {
+			if strings.EqualFold(header.GetKey(), "Content-Length") {
+				number, err := strconv.Atoi(header.GetValue())
+				contentLength = int64(number)
+				if err != nil {
+					return nil, fmt.Errorf("Erro ao extrair Content-Lenght")
+				}
+			}
+		}
+
+		if contentLength > 0 {
+			limitedReader := io.LimitReader(f, contentLength)
+			scanner := bufio.NewScanner(limitedReader)
+
+			for scanner.Scan() {
+				line := scanner.Text()
+				body, err := getBodyContent(line)
+				if err != nil {
+					return nil, fmt.Errorf("Erro ao extrair conteúdo do body")
+				}
+
+				if body == nil {
+					continue
+				}
+				req.AppendBodyToRequest(body)
+			}
 		}
 	}
 
@@ -76,4 +108,20 @@ func GetHeadersRequest(f io.ReadCloser) (*Request, error) {
 	}
 
 	return req, nil
+}
+
+func getBodyContent(input string) (*Body, error) {
+	KeyAndValue := strings.SplitN(input, ":", 2)
+	if len(KeyAndValue) != 2 {
+		return nil, nil
+	}
+
+	key := strings.TrimSpace(KeyAndValue[0])
+	value := strings.TrimSpace(KeyAndValue[1])
+	body := &Body{
+		key:   key,
+		value: value,
+	}
+
+	return body, nil
 }
