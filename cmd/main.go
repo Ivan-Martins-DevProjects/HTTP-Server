@@ -51,6 +51,8 @@ func main() {
 				log.Fatal("error", "error", result.Err)
 			}
 
+			params := result.Req.Params
+			fmt.Printf("Method: %s, Path: %s, Version: %s\n", params.Method, params.Path, params.Version)
 			for _, header := range result.Req.Headers {
 				fmt.Printf("%s: %s\n", header.Key, header.Value)
 			}

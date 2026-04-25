@@ -8,6 +8,7 @@ import (
 )
 
 type Request struct {
+	Params  *Params
 	Headers []*Header
 	mu      sync.Mutex
 }
@@ -24,6 +25,12 @@ type Header struct {
 	Value string
 }
 
+type Params struct {
+	Method  string
+	Path    string
+	Version string
+}
+
 func CreateHeader(key, value string) *Header {
 	return &Header{
 		Key:   key,
@@ -34,6 +41,19 @@ func CreateHeader(key, value string) *Header {
 func GetHeadersRequest(f io.ReadCloser) (*Request, error) {
 	req := &Request{}
 	scanner := bufio.NewScanner(f)
+
+	if scanner.Scan() {
+		pathLine := scanner.Text()
+		parts := strings.Fields(pathLine)
+		if len(parts) >= 2 {
+			method := &Params{
+				Method:  parts[0],
+				Path:    parts[1],
+				Version: parts[2],
+			}
+			req.Params = method
+		}
+	}
 
 	for scanner.Scan() {
 		line := scanner.Text()
