@@ -1,13 +1,15 @@
-package internal
+package tests
 
 import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/Ivan-Martins-DevProjects/HTTP-Server/cmd/internal"
 )
 
 func TestBloqueioDeIP(t *testing.T) {
-	IpList := CreateIpList()
+	IpList := internal.CreateIpList()
 
 	testes := []struct {
 		ip         string
@@ -16,8 +18,8 @@ func TestBloqueioDeIP(t *testing.T) {
 	}{
 		{"192.168.0.1", 1, false},
 		{"192.168.0.2", 2, false},
-		{"192.168.0.3", MAXIMUM_REQUESTS, true},
-		{"192.168.0.4", MAXIMUM_REQUESTS + 1, true},
+		{"192.168.0.3", internal.MAXIMUM_REQUESTS, true},
+		{"192.168.0.4", internal.MAXIMUM_REQUESTS + 1, true},
 	}
 
 	for _, teste := range testes {
@@ -43,8 +45,8 @@ func TestBloqueioDeIP(t *testing.T) {
 
 func TestIpBloqueado(t *testing.T) {
 	const IP = "192.168.1.0"
-	ipList := CreateIpList()
-	ipAddr := &IpAddr{
+	ipList := internal.CreateIpList()
+	ipAddr := &internal.IpAddr{
 		Count:   4,
 		Blocked: true,
 		Expire:  time.Now().Add(12 * time.Hour),
