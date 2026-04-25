@@ -26,16 +26,19 @@ func HandleConnections(c net.Conn, IpList *IpList) {
 	// Imprime os headers capturados
 	params := req.Params
 	fmt.Println("PARAMS")
-	fmt.Printf("Method: %s, Path: %s, Version: %s\n\n", params.Method, params.Path, params.Version)
+	params.SetParams()
+	for key, value := range params.Params {
+		fmt.Printf("%s: %s\n", key, value)
+	}
 
 	fmt.Println("HEADERS")
-	for _, header := range req.Headers {
-		fmt.Printf("%s: %s\n", header.GetKey(), header.GetValue())
+	for key, value := range req.Headers {
+		fmt.Printf("%s: %s\n", key, value)
 	}
 
 	fmt.Printf("\nBODY\n")
-	for _, body := range req.Body {
-		fmt.Printf("%s: %s\n", body.GetKey(), body.GetValue())
+	for key, value := range req.Body {
+		fmt.Printf("%s: %s\n", key, value)
 	}
 
 }
