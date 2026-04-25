@@ -31,7 +31,7 @@ type Params struct {
 	Version string
 }
 
-func GetHeadersRequest(f io.ReadCloser) (*Request, error) {
+func GetRequestContext(f io.ReadCloser) (*Request, error) {
 	req := &Request{Content: false}
 	scanner := bufio.NewScanner(f)
 
