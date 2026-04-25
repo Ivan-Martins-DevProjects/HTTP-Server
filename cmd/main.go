@@ -1,47 +1,15 @@
 package main
 
 import (
-	"bytes"
-	// "fmt"
-	"io"
+	"fmt"
+	"github.com/Ivan-Martins-DevProjects/HTTP-Server/cmd/internal"
 	"log"
 	"net"
-
-	"github.com/Ivan-Martins-DevProjects/HTTP-Server/cmd/internal"
 )
 
-func getLinesChannel(f io.ReadCloser) <-chan string {
-	out := make(chan string, 1)
-
-	go func() {
-		defer f.Close()
-		defer close(out)
-
-		str := ""
-		for {
-			data := make([]byte, 8)
-			n, err := f.Read(data)
-			if err != nil {
-				break
-			}
-
-			data = data[:n]
-			if i := bytes.IndexByte(data, '\n'); i != -1 {
-				str += string(data[:i])
-				data = data[i+1:]
-				out <- str
-				str = ""
-			}
-
-			str += string(data)
-		}
-
-		if len(str) != 0 {
-			out <- str
-		}
-	}()
-
-	return out
+type Result struct {
+	Req *internal.Request
+	Err error
 }
 
 func main() {
@@ -61,21 +29,31 @@ func main() {
 		go func(c net.Conn) {
 			defer c.Close()
 
+			// Função para capturar os headers de forma assíncrona
+			headersChannel := make(chan Result)
+			go func() {
+				req, err := internal.GetHeadersRequest(c)
+				headersChannel <- Result{Req: req, Err: err}
+			}()
+
+			// Coleta o endereço IP
 			ipAddr, _, _ := net.SplitHostPort(c.RemoteAddr().String())
 
 			// Verifica rate limit
 			if err := IpList.AddAndCheckIP(ipAddr); err != nil {
-				log.Printf("IP %s bloqueado: %v", ipAddr, err)
-				return
-			} else {
-				log.Printf("IP %s logado", ipAddr)
+				log.Fatalf("IP %s bloqueado: %v", ipAddr, err)
+			}
+			log.Printf("IP %s logado\n", ipAddr)
+
+			// Imprime os headers capturados
+			result := <-headersChannel
+			if result.Err != nil {
+				log.Fatal("error", "error", result.Err)
 			}
 
-			// Processa as linhas
-			// for line := range getLinesChannel(c) {
-			// 	fmt.Printf("[%s] Read: %s\n", ipAddr, line)
-			// }
+			for _, header := range result.Req.Headers {
+				fmt.Printf("%s: %s\n", header.Key, header.Value)
+			}
 		}(conn)
 	}
-
 }
