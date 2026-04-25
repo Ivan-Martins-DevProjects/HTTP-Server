@@ -41,7 +41,7 @@ func TestBloqueioDeIP(t *testing.T) {
 	}
 }
 
-func TestIpBloquado(t *testing.T) {
+func TestIpBloqueado(t *testing.T) {
 	const IP = "192.168.1.0"
 	ipList := CreateIpList()
 	ipAddr := &IpAddr{
