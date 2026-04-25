@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -21,8 +22,17 @@ func (r *Request) AppendHeaderToRequest(header *Header) {
 	r.Headers[strings.ToLower(header.key)] = header.value
 }
 
-func (r *Request) AppendBodyToRequest(body *Body) {
-	r.Body[strings.ToLower(body.key)] = body.value
+func (r *Request) AppendBodyToRequest(rawBody string) error {
+	var dict map[string]any
+
+	err := json.Unmarshal([]byte(rawBody), &dict)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(dict)
+	r.Body = dict
+	return nil
 }
 
 type Params struct {
@@ -111,7 +121,6 @@ func GetRequestContext(f io.ReadCloser) (*Request, error) {
 		convertedLength, err := strconv.Atoi(strLength)
 		if err != nil {
 			return nil, fmt.Errorf("Content-Lenght deve ser um inteiro")
-
 		}
 
 		contentLength = int64(convertedLength)
@@ -120,17 +129,14 @@ func GetRequestContext(f io.ReadCloser) (*Request, error) {
 			limitedReader := io.LimitReader(f, contentLength)
 			scanner := bufio.NewScanner(limitedReader)
 
+			newLine := ""
 			for scanner.Scan() {
 				line := scanner.Text()
-				body, err := getBodyContent(line)
-				if err != nil {
-					return nil, fmt.Errorf("Erro ao extrair conteúdo do body")
-				}
-
-				if body == nil {
-					continue
-				}
-				req.AppendBodyToRequest(body)
+				newLine += line
+			}
+			err = req.AppendBodyToRequest(newLine)
+			if err != nil {
+				return nil, fmt.Errorf("Estrutura de Json Inválida")
 			}
 		}
 	}
@@ -140,20 +146,4 @@ func GetRequestContext(f io.ReadCloser) (*Request, error) {
 	}
 
 	return req, nil
-}
-
-func getBodyContent(input string) (*Body, error) {
-	KeyAndValue := strings.SplitN(input, ":", 2)
-	if len(KeyAndValue) != 2 {
-		return nil, nil
-	}
-
-	key := strings.TrimSpace(KeyAndValue[0])
-	value := strings.TrimSpace(KeyAndValue[1])
-	body := &Body{
-		key:   key,
-		value: value,
-	}
-
-	return body, nil
 }
