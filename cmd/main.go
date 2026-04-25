@@ -37,7 +37,7 @@ func main() {
 			}()
 
 			// Coleta o endereço IP
-			ipAddr, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+			ipAddr := c.RemoteAddr().String()
 
 			// Verifica rate limit
 			if err := IpList.AddAndCheckIP(ipAddr); err != nil {
