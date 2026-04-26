@@ -18,6 +18,22 @@ type Request struct {
 	mu      sync.Mutex
 }
 
+func (r *Request) Method() string {
+	return r.Params.Method
+}
+
+func (r *Request) Query() map[string]string {
+	return r.Params.Params
+}
+
+func (r *Request) Header() map[string]any {
+	return r.Headers
+}
+
+func (r *Request) Data() map[string]any {
+	return r.Body
+}
+
 func (r *Request) AppendHeaderToRequest(header *Header) {
 	r.Headers[strings.ToLower(header.key)] = header.value
 }
@@ -30,7 +46,6 @@ func (r *Request) AppendBodyToRequest(rawBody string) error {
 		return err
 	}
 
-	fmt.Println(dict)
 	r.Body = dict
 	return nil
 }
@@ -42,11 +57,11 @@ type Params struct {
 	Params  map[string]string
 }
 
-func (p *Params) SetParams() {
+func (p *Params) SetParams(parameters string) {
 	finalParams := make(map[string]string)
-	parameters := strings.SplitN(p.Path, "?", 2)
-	if len(parameters) > 0 {
-		for _, param := range parameters {
+	newParameters := strings.SplitN(parameters, "?", 2)
+	if len(newParameters) > 0 {
+		for _, param := range newParameters {
 			individualParams := strings.SplitN(param, "=", 2)
 			if len(individualParams) == 2 {
 				key := strings.TrimSpace(individualParams[0])
@@ -57,6 +72,14 @@ func (p *Params) SetParams() {
 	}
 
 	p.Params = finalParams
+}
+
+func getPath(s string) string {
+	if i := strings.Index(s, "?"); i != -1 {
+		return s[:i]
+	}
+
+	return s
 }
 
 func GetRequestContext(f io.ReadCloser) (*Request, error) {
@@ -73,9 +96,10 @@ func GetRequestContext(f io.ReadCloser) (*Request, error) {
 		if len(parts) >= 2 {
 			method := &Params{
 				Method:  parts[0],
-				Path:    parts[1],
 				Version: parts[2],
 			}
+			method.SetParams(parts[1])
+			method.Path = getPath(parts[1])
 			req.Params = method
 		}
 	}
